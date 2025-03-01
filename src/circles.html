@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Circles</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
+    <!-- Import D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Configure Tailwind to use Inter UI with complete font stack -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        circle {
+            transition: fill 0.3s ease;
+        }
+        circle:hover {
+            fill-opacity: 0.7;
+            cursor: pointer;
+        }
+        
+        /* Tooltip styling */
+        .tooltip {
+            position: absolute;
+            padding: 8px 12px;
+            background: rgba(150, 150, 150, 0.8);
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 10;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Enhanced transition styling for display name */
+        #display-name {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: relative;
+        }
+        
+        #display-name.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Create a container for the current and next text */
+        #display-name span {
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        #display-name span.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="flex-col items-center justify-center p-8 bg-gray-200 h-screen font-['Inter_UI',sans-serif]">
+    <div class="flex justify-center bg-gray-200 p-8 rounded-3xl h-full w-full">
+        <div class="text-2xl flex w-fit flex-col h-full mr-16">
+            <h1 class="text-4xl font-bold text-slate-500 h-8 mt-4 mb-8" id="display-name"></h1>
+
+            <div class="flex bg-slate-300/60 px-5 py-4 rounded-xl w-fit">
+                <div class="text-blue-500 cursor-pointer flex items-center mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                    </svg>
+                    One
+                </div>
+                <div class="text-blue-600 cursor-pointer flex items-center mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-5a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1zm4-3a1 1 0 00-1-1H8a1 1 0 00-1 1v1a1 1 0 001 1h4a1 1 0 001-1V10z" clip-rule="evenodd" />
+                    </svg>
+                    Two
+                </div>
+                <div class="text-blue-800 cursor-pointer flex items-center mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+                        <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+                    </svg>
+                    Three
+                </div>
+            </div>
+
+            <div class="flex font-light bg-slate-300/60 px-5 py-4 rounded-xl mt-4">
+                <p class="text-slate-500/80">One, two, three, four, seven</p>
+            </div>
+
+            <div class="flex items-center font-light bg-slate-300/60 px-5 py-4 rounded-xl mt-4">
+                <div class="w-2 h-2 bg-slate-500 rounded-full"></div>
+                <p class="text-slate-500/80 ml-2">Oneone & cndjsknjk</p>
+            </div>
+        </div>
+
+        <div class="w-[40rem]" id="visualization-container">
+
+            <!-- D3 will insert the SVG here -->
+        </div>
+    </div>
+    <!--<footer class="absolute bottom-0 w-[96vw] py-4 rounded-t-3xl bg-gray-200/0 text-slate-500 text-sm">
+        <div class="container ml-20 flex space-x-4 text-xl">
+            <a href="#" class=" hover:text-slate-800 transition-colors">Contact</a>
+            <a href="#" class=" hover:text-slate-800 transition-colors">About</a>
+            <a href="#" class=" hover:text-slate-800 transition-colors">Twitter</a>
+        </div>
+    </footer>-->
+    
+    <!-- Add div for tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <script>
+        // Define a variable to track the current displayed name
+        let currentDisplayedName = '';
+        
+        // Function to handle display name transitions
+        function updateDisplayName(newName) {
+            const displayElement = d3.select('#display-name');
+            
+            // If empty or same name, just update visibility
+            if (!currentDisplayedName || currentDisplayedName === newName) {
+                displayElement.html(`<span class="active">${newName}</span>`);
+                displayElement.classed('visible', true);
+                currentDisplayedName = newName;
+                return;
+            }
+            
+            // If transitioning between different names
+            // First, mark the current name for transition out
+            displayElement.select('span.active').classed('active', false);
+            
+            // Add the new name and mark it as active after a tiny delay
+            displayElement.append('span').text(newName);
+            
+            // Force a reflow to ensure the transition works
+            void displayElement.node().offsetWidth;
+            
+            // Activate the new name for transition in
+            displayElement.select('span:last-child').classed('active', true);
+            
+            // Update the tracking variable
+            currentDisplayedName = newName;
+            
+            // Ensure the container is visible
+            displayElement.classed('visible', true);
+            
+            // Clean up old spans after transition completes
+            setTimeout(() => {
+                displayElement.selectAll('span:not(.active)').remove();
+            }, 300); // Match transition duration
+        }
+        
+        // Function to hide display name - Modified to keep last hovered name visible
+        function hideDisplayName() {
+            // We're not hiding the name anymore, so this function is now just a placeholder
+            // The display-name element will remain visible with the last hovered circle's name
+            
+            // For potential future use, we'll keep this function, but it won't actually hide anything
+            // currentDisplayedName will retain its value, and the element will stay visible
+            
+            // No need for setTimeout or other cleanup since we're keeping the display
+        }
+
+        // Define sample data for the circles
+        const circleData = [
+            {name: "one", size: 100, group: 1},
+            {name: "two", size: 80, group: 1},
+            {name: "three", size: 65, group: 2},
+            {name: "four", size: 75, group: 2},
+            {name: "five", size: 90, group: 3},
+            {name: "six", size: 55, group: 3},
+            {name: "seven", size: 85, group: 1},
+            {name: "eight", size: 60, group: 2},
+            {name: "nine", size: 70, group: 3},
+            {name: "ten", size: 50, group: 3},
+            {name: "eleven", size: 40, group: 3},
+            {name: "twelve", size: 30, group: 3},
+            {name: "thirteen", size: 20, group: 3},
+            {name: "fourteen", size: 10, group: 3},
+            {name: "fifteen", size: 100, group: 1},
+            {name: "sixteen", size: 80, group: 1},
+            {name: "seventeen", size: 65, group: 2},
+            {name: "eighteen", size: 75, group: 2},
+            {name: "nineteen", size: 90, group: 3},
+            {name: "twenty", size: 55, group: 3}
+        ];
+
+        // Get the number of circles from the data
+        let circleCount = circleData.length;
+        
+        // Base size as scaling factor for the provided sizes
+        let baseSize = calculateBaseSize(circleCount);
+        const spacing = 5; // Spacing between circles
+        
+        // Function to calculate appropriate base size based on circle count
+        function calculateBaseSize(count) {
+            // As circle count increases, reduce the base size
+            if (count <= 5) {
+                return 1.8; // Larger circles for fewer elements
+            } else if (count <= 10) {
+                return 1.65; // Medium-sized circles
+            } else if (count <= 15) {
+                return 1.2; // Smaller circles
+            } else {
+                return 1.0; // Minimum size for many circles
+            }
+        }
+        
+        // Calculate the total width needed for the SVG
+        // We'll recalculate this after assigning sizes
+        let totalWidth = circleData.reduce((sum, item) => sum + item.size, 0) * baseSize + (spacing * (circleCount - 1));
+        
+        // Create an SVG container using D3
+        const svg = d3.select('#visualization-container')
+            .append('svg')
+            .attr('width', '100%')  // Use 100% width of container
+            .attr('height', baseSize * 100) // Initial height
+            .style('overflow', 'visible');
+        
+        // Prepare the node data from our data
+        let nodesData = [];
+        let maxSize = 0;
+        
+        // Define three color groups (using Tailwind-like colors)
+        const colorGroups = [
+            { outer: '#BFDBFE', inner: '#60A5FA' },  // Light blue (Group 1)
+            { outer: '#93C5FD', inner: '#3B82F6' },  // Medium blue (Group 2)
+            { outer: '#7DD3FC', inner: '#0369A1' }   // Dark blue (Group 3)
+        ];
+        
+        // Create node data for each circle with sizes from the data
+        circleData.forEach((item, i) => {
+            // Apply base size as a scaling factor
+            let circleSize = item.size * baseSize;
+            
+            // Track maximum size
+            maxSize = Math.max(maxSize, circleSize);
+            
+            // Assign a color group based on the group in the data or default to index
+            const colorGroupIndex = (item.group !== undefined) ? 
+                (item.group - 1) % colorGroups.length : 
+                i % colorGroups.length;
+            
+            nodesData.push({
+                id: i,
+                name: item.name,
+                size: circleSize,
+                x: totalWidth / 2, // Initial position at center
+                y: baseSize * 100 / 2,
+                colorGroup: colorGroupIndex,
+                originalSize: item.size // Store original size for reference
+            });
+        });
+        
+        // Sort by size descending (largest first)
+        nodesData.sort((a, b) => b.size - a.size);
+        
+        // Recalculate total width based on actual sizes
+        totalWidth = maxSize * 3; // Adjust width to fit the layout
+        svg.attr('width', totalWidth)
+           .attr('height', totalWidth); 
+        
+        // Create groups for each circle pair (outer + inner)
+        const groups = [];
+        
+        // Create simulation with custom forces for organic layout
+        let simulation = d3.forceSimulation(nodesData)
+            .force("center", d3.forceCenter(totalWidth / 2, totalWidth / 2))
+            .force("collide", d3.forceCollide().radius(d => d.size / 2 + spacing / 2).strength(0.7))
+            .force("charge", d3.forceManyBody().strength(-30))
+            // Add a custom size-based positioning force
+            .force("sizeBased", d3.forceRadial(d => {
+                // Custom radius based on circle size - larger circles closer to center
+                const sizeRatio = d.size / maxSize;
+                // Smaller radius for larger circles, using inverse relationship
+                return (totalWidth / 3) * (1 - (sizeRatio * 0.7));
+            }, totalWidth / 2, totalWidth / 2).strength(0.1)) // Light strength to allow organic movement
+            .velocityDecay(0.6)
+            .alphaDecay(0.01)
+            .on("tick", ticked);
+        
+        // Add surrounding circle that contains all other circles
+        const surroundingCircle = svg.append('circle')
+            .attr('cx', totalWidth / 2)
+            .attr('cy', totalWidth / 2)
+            .attr('r', totalWidth * 0.95) // Increase from 0.8 to 0.95
+            .attr('fill', 'none')
+            .attr('stroke', '#CCCCCC')
+            .attr('stroke-width', 3)
+            .attr('stroke-dasharray', '8,8')
+            .attr('class', 'surrounding-circle');
+        
+        // Pre-calculate positions for all nodes
+        function preCalculatePositions() {
+            const center = { x: totalWidth / 2, y: totalWidth / 2 };
+            
+            // Position nodes with larger circles closer to center
+            for (let i = 0; i < nodesData.length; i++) {
+                const node = nodesData[i];
+                
+                // Calculate radius based on size - larger circles get smaller radius values
+                const sizeRatio = node.size / maxSize; // 1.0 for largest, smaller for others
+                
+                // Radius decreases as size increases - multiply by (1-sizeRatio) to make this inverse
+                const radius = (totalWidth / 3) * (1 - (sizeRatio * 0.7)); // 0.7 factor to moderate the effect
+                
+                // Random angle but size-dependent radius
+                const angle = Math.random() * 2 * Math.PI;
+                node.x = center.x + radius * Math.cos(angle);
+                node.y = center.y + radius * Math.sin(angle);
+            }
+            
+            // Apply positions immediately
+            ticked();
+        }
+        
+        // Create circles for each data point
+        for (let i = 0; i < circleCount; i++) {
+            // Create a group for this circle pair
+            const group = svg.append('g')
+                .attr('class', `circle-group-${i}`);
+            
+            groups.push(group);
+            
+            const node = nodesData[i];
+            const currentSize = node.size;
+            const colorGroup = colorGroups[node.colorGroup];
+            
+            // Create the outer circle
+            group.append('circle')
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('r', currentSize/2)
+                .attr('fill', colorGroup.outer)
+                .attr('class', 'outer-circle')
+                .on('mouseover', function(event) {
+                    // Show tooltip
+                    const tooltip = d3.select('#tooltip');
+                    tooltip.style('opacity', 1)
+                        .html(`Name: ${node.name}<br>Size: ${node.originalSize}<br>Group: ${node.colorGroup + 1}`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 25) + 'px');
+                    
+                    // Use new function for name display
+                    updateDisplayName(node.name);
+                })
+                .on('mousemove', function(event) {
+                    // Move tooltip with mouse
+                    const tooltip = d3.select('#tooltip');
+                    tooltip.style('left', (event.pageX + 10) + 'px')
+                          .style('top', (event.pageY - 25) + 'px');
+                })
+                .on('mouseout', function() {
+                    // Hide tooltip
+                    d3.select('#tooltip').style('opacity', 0);
+                    
+                    // Call hideDisplayName but it no longer hides the name
+                    hideDisplayName();
+                    // Note: We're keeping the name displayed now
+                });
+                
+            // Create the inner circle
+            group.append('circle')
+                .attr('cx', 0)
+                .attr('cy', 0)
+                .attr('r', currentSize/2 * 0.8/2) // 80% of outer circle's diameter, divide by 2 for radius
+                .attr('fill', colorGroup.inner)
+                .attr('class', 'inner-circle')
+                .on('mouseover', function(event) {
+                    // Show tooltip
+                    const tooltip = d3.select('#tooltip');
+                    tooltip.style('opacity', 1)
+                        .html(`Name: ${node.name}<br>Size: ${node.originalSize}<br>Group: ${node.colorGroup + 1}`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 25) + 'px');
+                    
+                    // Use new function for name display
+                    updateDisplayName(node.name);
+                })
+                .on('mousemove', function(event) {
+                    // Move tooltip with mouse
+                    const tooltip = d3.select('#tooltip');
+                    tooltip.style('left', (event.pageX + 10) + 'px')
+                          .style('top', (event.pageY - 25) + 'px');
+                })
+                .on('mouseout', function() {
+                    // Hide tooltip
+                    d3.select('#tooltip').style('opacity', 0);
+                    
+                    // Call hideDisplayName but it no longer hides the name
+                    hideDisplayName();
+                    // Note: We're keeping the name displayed now
+                });
+        }
+        
+        // Pre-calculate positions for all nodes
+        preCalculatePositions();
+        
+        // Display the name of the largest circle by default (first one after sorting)
+        if (nodesData.length > 0) {
+            // Short timeout to ensure DOM is ready
+            setTimeout(() => {
+                updateDisplayName(nodesData[0].name);
+            }, 100);
+        }
+        
+        // Disable the initial simulation movement
+        simulation.alpha(0);
+        
+        // Function to handle simulation ticks
+        function ticked() {
+            // Update each group of circles based on simulation
+            for (let i = 0; i < circleCount; i++) {
+                const node = nodesData[i];
+                const group = groups[i];
+                
+                // Update group position directly without transition
+                group.attr('transform', `translate(${node.x}, ${node.y})`);
+            }
+        }
+        
+        // Function to update circle sizes
+        function updateCircleSize(scaleFactor) {
+            // Update baseSize if circleCount has changed
+            baseSize = calculateBaseSize(circleCount) * scaleFactor;
+            
+            // Update each node's size in the data
+            nodesData.forEach((node, i) => {
+                // Scale size based on original data size and base scaling factor
+                node.size = node.originalSize * baseSize;
+                
+                // Update the corresponding group's circles directly
+                const group = groups[i];
+                
+                // Update outer circle directly
+                group.select('.outer-circle')
+                    .attr('r', node.size/2);
+                
+                // Update inner circle (80% of outer circle) directly
+                const innerSize = node.size * 0.8;
+                group.select('.inner-circle')
+                    .attr('r', innerSize/2);
+            });
+            
+            // Recalculate max size
+            maxSize = Math.max(...nodesData.map(node => node.size));
+            
+            // Get the container dimensions
+            const containerWidth = document.getElementById('visualization-container').clientWidth;
+            const containerHeight = containerWidth; // Make it square
+            
+            // Update SVG container
+            svg.attr('width', '100%')
+               .attr('height', containerHeight);
+            
+            // Update center point for forces to use container center
+            const centerX = containerWidth / 2;
+            const centerY = containerHeight / 2;
+            
+            // Update surrounding circle
+            surroundingCircle
+                .attr('cx', centerX)
+                .attr('cy', centerY)
+                .attr('r', Math.min(containerWidth, containerHeight) * 0.45); // Reduce radius to fit container
+            
+            // Update the collision detection radius
+            simulation.force("collide").radius(d => d.size / 2 + spacing / 2);
+            
+            // Update center force to use container center
+            simulation.force("center", d3.forceCenter(centerX, centerY));
+            
+            // Update radial force to use container center and dimensions
+            simulation.force("sizeBased", d3.forceRadial(d => {
+                const sizeRatio = d.size / maxSize;
+                return (Math.min(containerWidth, containerHeight) / 3) * (1 - (sizeRatio * 0.7));
+            }, centerX, centerY).strength(0.1));
+            
+            // Re-sort nodes by size after scaling
+            nodesData.sort((a, b) => b.size - a.size);
+            
+            // Restart the simulation with a very gentle alpha
+            simulation.alpha(0.3).restart();
+        }
+        
+        // Initialize with default scaling
+        updateCircleSize(1.0);
+
+        // Add window resize handler to keep circles centered
+        window.addEventListener('resize', () => {
+            updateCircleSize(1.0);
+        });
+
+        // Function to highlight circles of a specific group
+        function highlightGroup(groupNumber) {
+            // Add highlight effect to circles in the group
+            groups.forEach((group, i) => {
+                const node = nodesData[i];
+                // Check if node belongs to the hovered group
+                if ((node.colorGroup + 1) === groupNumber) {
+                    // Highlight effect for matching group
+                    group.select('.outer-circle')
+                        .transition()
+                        .duration(200)
+                        .attr('stroke', '#FFFFFF')
+                        .attr('stroke-width', 3)
+                        .attr('filter', 'drop-shadow(0 0 5px rgba(255,255,255,0.7))');
+                } else {
+                    // Reduce opacity for non-matching groups
+                    group.transition()
+                        .duration(200)
+                        .style('opacity', 0.4);
+                }
+            });
+        }
+        
+        // Function to reset all circles to default state
+        function resetHighlights() {
+            groups.forEach(group => {
+                group.select('.outer-circle')
+                    .transition()
+                    .duration(200)
+                    .attr('stroke', null)
+                    .attr('stroke-width', null)
+                    .attr('filter', null);
+                
+                group.transition()
+                    .duration(200)
+                    .style('opacity', 1);
+            });
+        }
+
+        // Add event listeners to group buttons
+        d3.select('.text-blue-500').on('mouseover', () => highlightGroup(1)).on('mouseout', resetHighlights);
+        d3.select('.text-blue-600').on('mouseover', () => highlightGroup(2)).on('mouseout', resetHighlights);
+        d3.select('.text-blue-800').on('mouseover', () => highlightGroup(3)).on('mouseout', resetHighlights);
+    </script>
+</body>
+</html>

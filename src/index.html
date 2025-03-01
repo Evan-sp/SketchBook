@@ -5,8 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Empty Tailwind Page</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
+    <!-- Configure Tailwind to use Inter UI with complete font stack -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="min-h-screen bg-slate-500">
-    <!-- Empty Tailwind CSS page -->
+<body class="min-h-screen bg-neutral-700 font-sans">
+    <nav class="p-4 flex justify-center text-xl text-neutral-400 font-light">
+        <ul class="flex space-x-6">
+            <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">One</a></li>
+            <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">Two</a></li>
+            <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">Three</a></li>
+        </ul>
+    </nav>
+    <div class="flex flex-col justify-center items-center">
+        <p class="text-neutral-400 text-8xl font-light">✦</p>
+        <div class="w-10 h-10 bg-neutral-800 rounded-full"></div>
+    </div>
+
 </body>
 </html>
