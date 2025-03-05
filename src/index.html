@@ -20,18 +20,131 @@
         }
     </script>
 </head>
-<body class="min-h-screen bg-neutral-700 font-sans">
-    <nav class="p-4 flex justify-center text-xl text-neutral-400 font-light">
-        <ul class="flex space-x-6">
-            <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">One</a></li>
-            <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">Two</a></li>
-            <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">Three</a></li>
-        </ul>
-    </nav>
-    <div class="flex flex-col justify-center items-center">
-        <p class="text-neutral-400 text-8xl font-light">✦</p>
-        <div class="w-10 h-10 bg-neutral-800 rounded-full"></div>
+<body class="h-screen bg-neutral-700 font-sans">
+    <div class="h-full max-h-screen">
+        <nav class="p-4 flex justify-center text-xl text-neutral-400 font-light">
+            <ul class="flex space-x-6">
+                <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">One</a></li>
+                <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">Two</a></li>
+                <li><a href="#" class=" hover:text-neutral-300 transition-colors duration-300">Three</a></li>
+            </ul>
+        </nav>
+        <div class="flex h-full flex-col justify-center items-center" id="container">
+            <div id="rotatingBox" class="bg-black w-20 h-20 flex justify-center items-center">
+                <div class="bg-gray-500 w-10 h-10 rounded-full flex justify-center items-center"> 
+                    <div class="w-7 h-7 bg-neutral-800 rounded-full flex justify-center items-center">
+                        <div class="w-5 h-5 bg-neutral-700 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const box = document.getElementById('rotatingBox');
+            let lastMouseX = 0;
+            let lastMouseY = 0;
+            let isFirstMove = true;
+            
+            // Momentum variables
+            let currentAngle = 0;
+            let angularVelocity = 0;
+            let lastAngle = 0;
+            let lastMoveTime = 0;
+            let isMoving = false;
+            let animationFrameId = null;
+            
+            // Constants for momentum
+            const friction = 0.95; // Higher = less friction
+            const velocityThreshold = 0.1; // Velocity below this is considered stopped
+            
+            // Get box center position
+            function getBoxCenter() {
+                const rect = box.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
+            
+            // Animation loop for momentum
+            function animateMomentum() {
+                if (!isMoving) {
+                    // Apply friction
+                    angularVelocity *= friction;
+                    
+                    // Update angle based on velocity
+                    currentAngle += angularVelocity;
+                    
+                    // Apply rotation
+                    box.style.transform = `rotate(${currentAngle}deg)`;
+                    
+                    // Stop animation when velocity is negligible
+                    if (Math.abs(angularVelocity) < velocityThreshold) {
+                        cancelAnimationFrame(animationFrameId);
+                        animationFrameId = null;
+                        return;
+                    }
+                }
+                
+                // Continue animation
+                animationFrameId = requestAnimationFrame(animateMomentum);
+            }
+            
+            // Update rotation based on cursor position
+            document.addEventListener('mousemove', function(e) {
+                const now = Date.now();
+                const boxCenter = getBoxCenter();
+                
+                // Skip first move to establish initial position
+                if (isFirstMove) {
+                    isFirstMove = false;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                    lastMoveTime = now;
+                    return;
+                }
+                
+                // Mark as actively moving
+                isMoving = true;
+                
+                // Calculate angle between cursor and box center
+                const deltaX = e.clientX - boxCenter.x;
+                const deltaY = e.clientY - boxCenter.y;
+                currentAngle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+                
+                // Calculate angular velocity (how fast the angle is changing)
+                const timeDelta = now - lastMoveTime;
+                if (timeDelta > 0) {
+                    // Calculate the smallest angle difference (accounting for 360° wrapping)
+                    let angleDiff = currentAngle - lastAngle;
+                    if (angleDiff > 180) angleDiff -= 360;
+                    if (angleDiff < -180) angleDiff += 360;
+                    
+                    // Angular velocity = change in angle over time
+                    angularVelocity = angleDiff / timeDelta * 16; // Scale for smoother motion
+                }
+                
+                // Apply rotation directly
+                box.style.transform = `rotate(${currentAngle}deg)`;
+                
+                // Start or ensure animation is running
+                if (!animationFrameId) {
+                    animationFrameId = requestAnimationFrame(animateMomentum);
+                }
+                
+                // Update last values
+                lastAngle = currentAngle;
+                lastMoveTime = now;
+                
+                // Reset isMoving after a short delay to detect when cursor stops
+                clearTimeout(window.moveTimeout);
+                window.moveTimeout = setTimeout(function() {
+                    isMoving = false;
+                }, 50);
+            });
+        });
+    </script>
 </body>
 </html>
