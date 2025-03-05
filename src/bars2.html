@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Bar Chart</title>
+    <!-- Import Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
+    <!-- Import D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Configure Tailwind to use Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-800 font-sans flex justify-center items-center">
+    <div class="relative mx-auto px-4 py-8 flex">
+        <!-- Data Selection List -->
+        <div class="mr-8">
+            <h3 class="text-white text-lg font-medium mb-4">Select Dataset</h3>
+            <ul id="data-selector" class="space-y-2">
+                <li class="bg-blue-600 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-700 transition" data-set="dataset1">Dataset 1</li>
+                <li class="bg-gray-700 text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-600 transition" data-set="dataset2">Dataset 2</li>
+                <li class="bg-gray-700 text-white px-4 py-2 rounded cursor-pointer hover:bg-gray-600 transition" data-set="dataset3">Dataset 3</li>
+            </ul>
+        </div>
+        
+        <!-- D3.js Bar Chart Container -->
+        <div id="chart" class=""></div>
+    </div>
+
+    <script>
+        // Multiple datasets with the same labels
+        const datasets = {
+            dataset1: [
+                { value: 80, color: "blue", label: "Jan" },
+                { value: 128, color: "green", label: "Feb" },
+                { value: 192, color: "purple", label: "Mar" },
+                { value: 96, color: "yellow", label: "Apr" },
+                { value: 144, color: "red", label: "May" },
+                { value: 160, color: "indigo", label: "Jun" },
+                { value: 64, color: "pink", label: "Jul" },
+                { value: 112, color: "teal", label: "Aug" }
+            ],
+            dataset2: [
+                { value: 150, color: "blue", label: "Jan" },
+                { value: 90, color: "green", label: "Feb" },
+                { value: 120, color: "purple", label: "Mar" },
+                { value: 180, color: "yellow", label: "Apr" },
+                { value: 60, color: "red", label: "May" },
+                { value: 100, color: "indigo", label: "Jun" },
+                { value: 130, color: "pink", label: "Jul" },
+                { value: 170, color: "teal", label: "Aug" }
+            ],
+            dataset3: [
+                { value: 70, color: "blue", label: "Jan" },
+                { value: 140, color: "green", label: "Feb" },
+                { value: 100, color: "purple", label: "Mar" },
+                { value: 180, color: "yellow", label: "Apr" },
+                { value: 120, color: "red", label: "May" },
+                { value: 60, color: "indigo", label: "Jun" },
+                { value: 200, color: "pink", label: "Jul" },
+                { value: 90, color: "teal", label: "Aug" }
+            ]
+        };
+
+        // Current active data
+        let currentData = datasets.dataset1;
+
+        // Chart dimensions
+        const margin = { top: 10, right: 10, bottom: 30, left: 40 };
+        const width = 720 - margin.left - margin.right;
+        const height = 300 - margin.top - margin.bottom;
+
+        // Create SVG container
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // X scale
+        const x = d3.scaleBand()
+            .domain(d3.range(currentData.length))
+            .range([0, width])
+            .padding(0.3);
+
+        // Y scale
+        const y = d3.scaleLinear()
+            .domain([0, 200])
+            .range([height, 0]);
+
+        // Create and style bars
+        svg.selectAll("rect")
+            .data(currentData)
+            .join("rect")
+            .attr("x", (d, i) => x(i))
+            .attr("y", d => y(d.value))
+            .attr("width", x.bandwidth())
+            .attr("height", d => height - y(d.value))
+            .attr("fill", d => `rgba(var(--tw-${d.color}-500-rgb), 0.6)`)
+            .attr("rx", 4); // Rounded top corners
+
+        // Add Y axis with axis line
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(d3.axisLeft(y)
+                .ticks(5)
+                .tickSize(0))
+            // Keep the domain (axis line)
+            .call(g => g.selectAll("text")
+                .attr("fill", "rgba(255, 255, 255, 0.6)")
+                .attr("font-size", "10px")
+                .attr("dx", "-10px"))
+            .call(g => g.select(".domain")
+                .attr("stroke", "rgba(75, 85, 99, 0.8)")  // Medium-dark gray with 80% opacity
+                .attr("stroke-width", 8)  // Increased from 4 to 8
+                .attr("stroke-linecap", "round"));
+
+        // Add X axis with axis line
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x)
+                .tickSize(0)
+                .tickFormat((d) => currentData[d].label))
+            .call(g => g.selectAll(".tick text")
+                .attr("fill", "rgba(255, 255, 255, 0.6)")
+                .attr("font-size", "10px")
+                .attr("y", 18))
+            .call(g => g.select(".domain")
+                .attr("stroke", "rgba(75, 85, 99, 0.8)")  // Medium-dark gray with 80% opacity
+                .attr("stroke-width", 8)  // Increased from 4 to 8
+                .attr("stroke-linecap", "round"));
+
+        // Add horizontal grid lines
+        svg.append("g")
+            .attr("class", "grid")
+            .selectAll("line")
+            .data(y.ticks(5))
+            .join("line")
+            .attr("x1", 0)
+            .attr("x2", width)
+            .attr("y1", d => y(d))
+            .attr("y2", d => y(d))
+            .attr("stroke", "rgba(255, 255, 255, 0.1)")
+            .attr("stroke-dasharray", "2,2");
+
+        // Function to update the chart with new data
+        function updateChart(newData) {
+            // Update the bars
+            svg.selectAll("rect")
+                .data(newData)
+                .transition()
+                .duration(750)
+                .attr("y", d => y(d.value))
+                .attr("height", d => height - y(d.value))
+                .attr("fill", d => `rgba(var(--tw-${d.color}-500-rgb), 0.6)`);
+        }
+
+        // Add click handlers for the list items
+        document.querySelectorAll("#data-selector li").forEach(item => {
+            item.addEventListener("click", function() {
+                // Update active state in UI
+                document.querySelectorAll("#data-selector li").forEach(li => {
+                    li.classList.remove("bg-blue-600");
+                    li.classList.add("bg-gray-700");
+                    li.classList.remove("hover:bg-blue-700");
+                    li.classList.add("hover:bg-gray-600");
+                });
+                
+                this.classList.remove("bg-gray-700", "hover:bg-gray-600");
+                this.classList.add("bg-blue-600", "hover:bg-blue-700");
+                
+                // Get the dataset name
+                const datasetName = this.getAttribute("data-set");
+                
+                // Update the chart
+                currentData = datasets[datasetName];
+                updateChart(currentData);
+            });
+        });
+
+        // Add CSS variables for Tailwind colors
+        const style = document.createElement('style');
+        style.textContent = `
+            :root {
+                --tw-blue-500-rgb: 59, 130, 246;
+                --tw-green-500-rgb: 34, 197, 94;
+                --tw-purple-500-rgb: 168, 85, 247;
+                --tw-yellow-500-rgb: 234, 179, 8;
+                --tw-red-500-rgb: 239, 68, 68;
+                --tw-indigo-500-rgb: 99, 102, 241;
+                --tw-pink-500-rgb: 236, 72, 153;
+                --tw-teal-500-rgb: 20, 184, 166;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

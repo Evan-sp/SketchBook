@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline</title>
+    <!-- Import Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
+    <!-- Import D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Configure Tailwind to use Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-mono min-h-screen bg-gray-800 text-gray-400">
+    <header class="flex items-center w-full p-8 mb-10">
+        <h1 class="text-2xl text-gray-200 font-bold">LLM Bench</h1>
+        <p class="ml-4 cursor-pointer">About</p>
+    </header>
+    <div class="mx-auto w-[55rem] h-full flex flex-col justify-center items-center border-2 border-gray-700 rounded-lg p-8">
+        <div class="flex flex-row items-center justify-start self-start ml-11">
+            <div class="w-5 h-5 bg-gray-700 mr-3 rounded-full"></div>
+            <h1 class="text-3xl self-start font-bold">ARC 2020</h1>
+        </div>
+        <div id="chart1" class="w-full"></div>
+    </div>
+
+    <script>
+        // Sample data for the chart
+        const data1 = [
+            { name: "Category A", value: 20 },
+            { name: "Category B", value: 40 },
+            { name: "Category C", value: 30 },
+            { name: "Category D", value: 60 },
+            { name: "Category E", value: 25 }
+        ];
+
+        // Function to create/update the chart
+        function createChart1() {
+            // Clear any existing chart
+            d3.select("#chart1").select("svg").remove();
+            
+            // Get the width of the container
+            const containerWidth = document.getElementById("chart1").clientWidth;
+            
+            // Chart dimensions
+            const width = containerWidth;
+            const height = Math.min(containerWidth * 0.4, 300);
+            const marginTop = 20;
+            const marginRight = 20;
+            const marginBottom = 50;
+            const marginLeft = 60;
+            const chartWidth = width - marginLeft - marginRight;
+            const chartHeight = height - marginTop - marginBottom;
+
+            // Create SVG
+            const svg = d3.select("#chart1")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .attr("viewBox", [0, 0, width, height])
+                .attr("class", "mx-auto");
+
+            // Create chart group
+            const chart = svg.append("g")
+                .attr("transform", `translate(${marginLeft}, ${marginTop})`);
+            
+            // Create scales
+            const xScale = d3.scaleBand()
+                .domain(data1.map(d => d.name))
+                .range([0, chartWidth])
+                .padding(0.3);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(data1, d => d.value)])
+                .range([chartHeight, 0]);
+
+            // Add color scale
+            const colorScale = d3.scaleOrdinal()
+                .domain(data1.map(d => d.name))
+                .range([
+                    "rgba(129, 140, 248, 0.7)", // indigo - Category A
+                    "rgba(167, 139, 250, 0.7)", // purple - Category B (changed)
+                    "rgba(16, 185, 129, 0.7)",  // emerald - Category C
+                    "rgba(239, 68, 68, 0.7)",   // red - Category D
+                    "rgba(45, 212, 191, 0.7)"   // teal - Category E (changed)
+                ]);
+            
+            // Add lighter versions for hover states
+            const hoverColorScale = d3.scaleOrdinal()
+                .domain(data1.map(d => d.name))
+                .range([
+                    "rgba(165, 180, 252, 0.9)", // lighter indigo - Category A
+                    "rgba(196, 181, 253, 0.9)", // lighter purple - Category B (changed)
+                    "rgba(110, 231, 183, 0.9)", // lighter emerald - Category C
+                    "rgba(252, 165, 165, 0.9)", // lighter red - Category D
+                    "rgba(94, 234, 212, 0.9)"   // lighter teal - Category E (changed)
+                ]);
+
+            // Create a background group for grid lines and axes (to appear behind)
+            const backgroundGroup = chart.append("g")
+                .attr("class", "background-elements");
+            
+            // Add grid lines first (so they appear behind)
+            backgroundGroup.selectAll(".grid-line")
+                .data(data1)
+                .join("line")
+                .attr("class", "grid-line")
+                .attr("x1", 0)
+                .attr("x2", chartWidth)
+                .attr("y1", d => yScale(d.value))
+                .attr("y2", d => yScale(d.value))
+                .attr("stroke", "rgba(107, 114, 128, 0.3)")
+                .attr("stroke-dasharray", "2,2")
+                .attr("pointer-events", "none"); // Ensure grid lines don't capture mouse events
+
+            // Create a single L-shaped path for both axes with increased thickness
+            backgroundGroup.append("path")
+                .attr("d", `
+                    M -4,0 
+                    L -4,${chartHeight} 
+                    L ${chartWidth},${chartHeight}
+                `)
+                .attr("stroke", "rgba(107, 114, 128, 0.4)")
+                .attr("stroke-width", 6)
+                .attr("stroke-linejoin", "round")
+                .attr("fill", "none")
+                .attr("pointer-events", "none"); // Ensure axes don't capture mouse events
+
+            // Add regular y-axis labels with darker shade
+            backgroundGroup.append("g")
+                .attr("transform", `translate(-10, 0)`)
+                .attr("class", "y-axis text-xs text-gray-400")
+                .attr("pointer-events", "none") // Prevent mouse event capture
+                .call(d3.axisLeft(yScale)
+                    // Filter out tick values that match our data points to avoid duplication
+                    .tickValues(yScale.ticks().filter(tick => !data1.some(d => d.value === tick)))
+                )
+                .call(g => g.select(".domain").remove())
+                .call(g => g.selectAll(".tick line")
+                    .attr("x1", 0)
+                    .attr("x2", chartWidth)
+                    .attr("stroke", "rgba(107, 114, 128, 0.1)")
+                    .attr("stroke-dasharray", "2,2"))
+                .call(g => g.selectAll("text")
+                    .attr("font-family", "monospace")
+                    .attr("fill", "rgba(156, 163, 175, 0.4)")
+                    .attr("fill-opacity", 0.4)
+                    .attr("font-size", "0.75rem"));
+
+            // Add custom y-axis labels at bar values
+            const yAxisLabels = backgroundGroup.selectAll(".y-axis-label")
+                .data(data1)
+                .join("g")
+                .attr("class", "y-axis-label")
+                .attr("transform", d => `translate(-10, ${yScale(d.value)})`)
+                .attr("pointer-events", "none"); // Prevent mouse event capture
+            
+            // Add highlighted tick lines (separate from text for better control)
+            yAxisLabels.append("line")
+                .attr("class", "value-grid-line")
+                .attr("x1", 0)
+                .attr("x2", chartWidth)
+                .attr("stroke", "rgba(107, 114, 128, 0.3)")
+                .attr("stroke-dasharray", "2,2")
+                .attr("pointer-events", "none");
+            
+            // Add the text labels
+            yAxisLabels.append("text")
+                .attr("x", -5)
+                .attr("y", 0)
+                .attr("dy", "0.32em")
+                .attr("text-anchor", "end")
+                .attr("font-family", "monospace")
+                .attr("fill", "rgb(156, 163, 175)")
+                .attr("fill-opacity", 1)
+                .attr("font-size", "0.75rem")
+                .text(d => d.value);
+
+            // Add x-axis labels
+            backgroundGroup.append("g")
+                .attr("transform", `translate(0, ${chartHeight + 10})`)
+                .attr("class", "x-axis text-xs text-gray-400")
+                .attr("pointer-events", "none") // Prevent mouse event capture
+                .call(d3.axisBottom(xScale))
+                .call(g => g.select(".domain").remove())
+                .call(g => g.selectAll(".tick line")
+                    .attr("y1", -chartHeight)
+                    .attr("y2", 0)
+                    .attr("stroke", "rgba(107, 114, 128, 0.2)")
+                    .attr("stroke-dasharray", "2,2"))
+                .call(g => g.selectAll("text")
+                    .attr("font-family", "monospace")
+                    .attr("fill", "rgb(156, 163, 175)")
+                    .attr("fill-opacity", 1));
+
+            // Add visible tick marks below the x-axis line
+            backgroundGroup.selectAll(".x-tick")
+                .data(data1)
+                .join("rect")
+                .attr("class", "x-tick")
+                .attr("x", d => xScale(d.name) + xScale.bandwidth() / 2 - 2)
+                .attr("y", chartHeight + 4)
+                .attr("width", 4)
+                .attr("height", 6)
+                .attr("rx", 1)
+                .attr("fill", "rgba(156, 163, 175, 0.7)")
+                .attr("pointer-events", "none"); // Prevent mouse event capture
+
+            // Create a separate foreground group for bars (to appear on top)
+            const foregroundGroup = chart.append("g")
+                .attr("class", "foreground-elements");
+            
+            // Add bars with adjusted positioning and no rounding at the bottom
+            foregroundGroup.selectAll(".bar")
+                .data(data1)
+                .join("path")
+                .attr("class", "bar")
+                .attr("d", d => {
+                    const x = xScale(d.name) + 3;
+                    const y = yScale(d.value);
+                    const width = xScale.bandwidth() - 3;
+                    const height = chartHeight - yScale(d.value) - 3;
+                    const radius = 6; // Corner radius
+                    
+                    // Create path with rounded top corners and square bottom corners
+                    return `
+                        M ${x + radius},${y}
+                        L ${x + width - radius},${y}
+                        Q ${x + width},${y} ${x + width},${y + radius}
+                        L ${x + width},${y + height}
+                        L ${x},${y + height}
+                        L ${x},${y + radius}
+                        Q ${x},${y} ${x + radius},${y}
+                        Z
+                    `;
+                })
+                .attr("fill", d => colorScale(d.name))
+                .attr("transform-origin", d => {
+                    return `${xScale(d.name) + xScale.bandwidth()/2} ${chartHeight/2}`;
+                })
+                .on("mouseenter", function(event, d) {
+                    const bar = d3.select(this);
+                    
+                    // Highlight the bar with smooth transition
+                    bar.transition()
+                        .duration(300)
+                        .attr("fill", d => hoverColorScale(d.name))
+                        .attr("transform", `scale(1.03)`)
+                        .ease(d3.easeCubicOut);
+                        
+                    // Blur all y-axis labels except the one matching this bar's value
+                    chart.selectAll(".y-axis-label text")
+                        .transition()
+                        .duration(200)
+                        .attr("fill-opacity", label => {
+                            return label.value === d.value ? 1 : 0.2;
+                        });
+                        
+                    // Highlight the matching y-axis label
+                    chart.selectAll(".y-axis-label")
+                        .filter(label => label.value === d.value)
+                        .select("text")
+                        .transition()
+                        .duration(200)
+                        .attr("fill", "#d1d5db")
+                        .attr("font-weight", "bold");
+                        
+                    // Also blur the regular y-axis ticks
+                    chart.selectAll(".y-axis text")
+                        .transition()
+                        .duration(200)
+                        .delay(50)
+                        .attr("fill-opacity", 0.2);
+                        
+                    // Highlight the grid line for this value
+                    chart.selectAll(".y-axis-label")
+                        .filter(label => label.value === d.value)
+                        .select("line")
+                        .transition()
+                        .duration(300)
+                        .attr("stroke", "rgba(156, 163, 175, 0.5)")
+                        .attr("stroke-dasharray", "3,1");
+                        
+                    // Blur all x-axis labels except the one matching this bar's category
+                    chart.selectAll(".x-axis .tick")
+                        .each(function(tickData) {
+                            const tickEl = d3.select(this);
+                            if (tickData === d.name) {
+                                // Highlight this label
+                                tickEl.select("text")
+                                    .transition()
+                                    .duration(250)
+                                    .attr("fill-opacity", 1)
+                                    .attr("font-weight", "bold")
+                                    .attr("fill", "#d1d5db");
+                            } else {
+                                // Blur other labels
+                                tickEl.select("text")
+                                    .transition()
+                                    .duration(200)
+                                    .attr("fill-opacity", 0.2)
+                                    .attr("font-weight", "normal");
+                            }
+                        });
+                        
+                    // Also blur x-axis tick marks
+                    chart.selectAll(".x-tick")
+                        .transition()
+                        .duration(200)
+                        .delay(50)
+                        .attr("fill-opacity", tick => tick.name === d.name ? 1 : 0.2);
+                        
+                    // Highlight the matching x-tick
+                    chart.selectAll(".x-tick")
+                        .filter(tick => tick.name === d.name)
+                        .transition()
+                        .duration(250)
+                        .attr("fill", "#d1d5db")
+                        .attr("height", 8);
+                })
+                .on("mouseleave", function(event, d) {
+                    const bar = d3.select(this);
+                    
+                    // Restore bar color and size with smooth transition
+                    bar.transition()
+                        .duration(400)
+                        .attr("fill", d => colorScale(d.name))
+                        .attr("transform", "scale(1)")
+                        .ease(d3.easeBackOut.overshoot(1.5));
+                
+                    // Restore all y-axis labels
+                    chart.selectAll(".y-axis-label text")
+                        .transition()
+                        .duration(300)
+                        .attr("fill-opacity", 1)
+                        .attr("fill", "rgb(156, 163, 175)")
+                        .attr("font-weight", "normal");
+                    
+                    // Restore grid lines
+                    chart.selectAll(".y-axis-label line")
+                        .transition()
+                        .duration(300)
+                        .attr("stroke", "rgba(107, 114, 128, 0.3)")
+                        .attr("stroke-dasharray", "2,2");
+                    
+                    // Restore regular y-axis ticks
+                    chart.selectAll(".y-axis text")
+                        .transition()
+                        .duration(300)
+                        .delay(50)
+                        .attr("fill-opacity", 0.4);
+                    
+                    // Restore all x-axis labels
+                    chart.selectAll(".x-axis .tick text")
+                        .transition()
+                        .duration(300)
+                        .attr("fill-opacity", 1)
+                        .attr("font-weight", "normal")
+                        .attr("fill", "rgb(156, 163, 175)");
+                    
+                    // Restore x-axis tick marks
+                    chart.selectAll(".x-tick")
+                        .transition()
+                        .duration(300)
+                        .attr("fill-opacity", 1)
+                        .attr("fill", "rgba(156, 163, 175, 0.7)")
+                        .attr("height", 6);
+                });
+        }
+
+        // Create the chart initially
+        createChart1();
+
+        // Update the chart when the window resizes
+        window.addEventListener('resize', function() {
+            createChart1();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WPM Distribution Bar Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="output.css">
+    <style>
+        /* D3-specific styling that can't be replaced with Tailwind */
+        .axis path,
+        .axis line {
+            stroke: #ccc;
+        }
+        
+        .axis text {
+            fill: #333;
+            font-size: 11px;
+        }
+        
+        .grid line {
+            stroke: #ccc;
+            stroke-opacity: 0.2;
+        }
+        
+        .grid path {
+            stroke-width: 0;
+        }
+        
+        .bar {
+            fill: #8bcdc8;
+        }
+        
+        .y-label {
+            fill: #333;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body class="bg-gray-200 font-normal p-12 font-mono">
+    <div class="container mx-auto w-full">
+        <!-- Stats section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 text-center">
+            <div>
+                <div class="text-slate-600 text-lg">total tests started</div>
+                <div class="flex flex-col justify-center items-center">
+                    <span class="text-4xl" style="color: #8bcdc8;">4.27</span>
+                    <span class="text-xl" style="color: #8bcdc8;">billion</span>
+                </div>
+            </div>
+            
+            <div>
+                <div class="text-slate-600 text-lg">total typing time</div>
+                <div class="flex flex-col justify-center items-center">
+                    <span class="text-4xl" style="color: #8bcdc8;">1063</span>
+                    <span class="text-xl" style="color: #8bcdc8;">years</span>
+                </div>
+            </div>
+            
+            <div>
+                <div class="text-slate-600 text-lg font-light">total tests completed</div>
+                <div class="flex flex-col justify-center items-center">
+                    <span class="text-4xl" style="color: #8bcdc8;">632</span>
+                    <span class="text-xl" style="color: #8bcdc8;">million</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="chart" class="w-full"></div>
+        <div class="text-center text-gray-600 text-sm mt-2">distribution of time 60 leaderboard results (wpm)</div>
+    </div>
+
+    <script>
+        // Function to create responsive chart
+        function createChart() {
+            // Clear any existing chart
+            d3.select("#chart").html("");
+            
+            // Sample data based on the distribution in the image
+            const data = [
+                {range: "0-9", users: 200},
+                {range: "10-19", users: 3500},
+                {range: "20-29", users: 7000},
+                {range: "30-39", users: 15000},
+                {range: "40-49", users: 23000},
+                {range: "50-59", users: 32000},
+                {range: "60-69", users: 38000},
+                {range: "70-79", users: 41400},
+                {range: "80-89", users: 40000},
+                {range: "90-99", users: 37000},
+                {range: "100-109", users: 32000},
+                {range: "110-119", users: 25000},
+                {range: "120-129", users: 19000},
+                {range: "130-139", users: 14000},
+                {range: "140-149", users: 10000},
+                {range: "150-159", users: 6000},
+                {range: "160-169", users: 3000},
+                {range: "170-179", users: 1800},
+                {range: "180-189", users: 1000},
+                {range: "190-199", users: 600},
+                {range: "200-209", users: 400},
+                {range: "210-219", users: 250},
+                {range: "220-229", users: 150},
+                {range: "230-239", users: 100},
+                {range: "240-249", users: 80},
+                {range: "250-259", users: 50},
+                {range: "260-269", users: 30},
+                {range: "270+", users: 20}
+            ];
+
+            // Get container width
+            const containerWidth = document.getElementById('chart').clientWidth;
+            
+            // Set up dimensions and margins
+            const margin = {top: 30, right: 30, bottom: 70, left: 60};
+            const width = containerWidth - margin.left - margin.right;
+            const height = 300 - margin.top - margin.bottom;
+
+            // Create SVG element
+            const svg = d3.select("#chart")
+                .append("svg")
+                .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+                .attr("preserveAspectRatio", "xMidYMid meet")
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // X axis
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.range))
+                .range([0, width])
+                .padding(0.15);
+            
+            svg.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .style("text-anchor", "end")
+                .attr("transform", "rotate(-45)")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em");
+
+            // Add Y axis
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.users) * 1.1])
+                .range([height, 0]);
+            
+            svg.append("g")
+                .attr("class", "axis")
+                .call(d3.axisLeft(y).ticks(5));
+
+            // Add Y axis label
+            svg.append("text")
+                .attr("class", "y-label")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -margin.left + 15)
+                .attr("x", -height / 2)
+                .attr("text-anchor", "middle")
+                .text("Users");
+
+            // Add the grid
+            svg.append("g")
+                .attr("class", "grid")
+                .call(d3.axisLeft(y)
+                    .ticks(5)
+                    .tickSize(-width)
+                    .tickFormat("")
+                );
+
+            // Add the bars
+            svg.selectAll(".bar")
+                .data(data)
+                .enter()
+                .append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.range))
+                .attr("width", x.bandwidth())
+                .attr("y", d => y(d.users))
+                .attr("height", d => height - y(d.users));
+        }
+
+        // Create chart on load
+        createChart();
+        
+        // Redraw chart when window is resized
+        window.addEventListener('resize', createChart);
+    </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Bar Chart</title>
+    <!-- Import Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Inter font from Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap">
+    <!-- Import D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Configure Tailwind to use Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', '"Segoe UI"', 'Helvetica', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-800 font-sans flex justify-center items-center">
+    <div class="relative mx-auto px-4 py-8 w-fit">
+        <div class="absolute h-5 w-5 bg-gray-700/60 rounded-xl"></div>
+        <div class="h-64 w-5 bg-gray-700/60 rounded-xl"></div>
+        <div class="h-5 w-[37rem] -mt-5 bg-gray-700/60 rounded-xl"></div>
+        
+        <!-- D3.js Bar Chart Container -->
+        <div id="chart" class="absolute bottom-[3.3rem] left-8"></div>
+        
+        <div class="absolute right-4 bottom-8 h-5 w-5 bg-gray-700/60 rounded-xl"></div>
+    </div>
+
+    <script>
+        // Sample data
+        const data = [
+            { value: 80, color: "blue", label: "Jan" },
+            { value: 128, color: "green", label: "Feb" },
+            { value: 192, color: "purple", label: "Mar" },
+            { value: 96, color: "yellow", label: "Apr" },
+            { value: 144, color: "red", label: "May" },
+            { value: 160, color: "indigo", label: "Jun" },
+            { value: 64, color: "pink", label: "Jul" },
+            { value: 112, color: "teal", label: "Aug" }
+        ];
+
+        // Chart dimensions
+        const margin = { top: 10, right: 10, bottom: 30, left: 0 };
+        const width = 720 - margin.left - margin.right;
+        const height = 300 - margin.top - margin.bottom;
+
+        // Create SVG container
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // X scale
+        const x = d3.scaleBand()
+            .domain(d3.range(data.length))
+            .range([0, width])
+            .padding(0.3);
+
+        // Y scale
+        const y = d3.scaleLinear()
+            .domain([0, 200])
+            .range([height, 0]);
+
+        // Create and style bars
+        svg.selectAll("rect")
+            .data(data)
+            .join("rect")
+            .attr("x", (d, i) => x(i))
+            .attr("y", d => y(d.value))
+            .attr("width", x.bandwidth())
+            .attr("height", d => height - y(d.value))
+            .attr("fill", d => `rgba(var(--tw-${d.color}-500-rgb), 0.6)`)
+            .attr("rx", 4); // Rounded top corners
+
+        // Add Y axis with axis line
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(d3.axisLeft(y)
+                .ticks(5)
+                .tickSize(0))
+            // Keep the domain (axis line)
+            .call(g => g.selectAll("text")
+                .attr("fill", "rgba(255, 255, 255, 0.6)")
+                .attr("font-size", "10px")
+                .attr("dx", "5px")
+                .attr("dy", "3px")
+                .style("text-anchor", "start")) // Change text anchor to start
+            .call(g => g.select(".domain").remove()); // Remove the domain line
+
+        // Add X axis with axis line
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x)
+                .tickSize(0)
+                .tickFormat((d) => data[d].label))
+            .call(g => g.selectAll(".tick text")
+                .attr("fill", "rgba(255, 255, 255, 0.6)")
+                .attr("font-size", "10px")
+                .attr("y", 10))
+            .call(g => g.select(".domain").remove()); // Remove the domain line
+
+        // Add horizontal grid lines
+        svg.append("g")
+            .attr("class", "grid")
+            .selectAll("line")
+            .data(y.ticks(5))
+            .join("line")
+            .attr("x1", 0)
+            .attr("x2", width)
+            .attr("y1", d => y(d))
+            .attr("y2", d => y(d))
+            .attr("stroke", "rgba(255, 255, 255, 0.1)")
+            .attr("stroke-dasharray", "2,2");
+
+        // Add CSS variables for Tailwind colors
+        const style = document.createElement('style');
+        style.textContent = `
+            :root {
+                --tw-blue-500-rgb: 59, 130, 246;
+                --tw-green-500-rgb: 34, 197, 94;
+                --tw-purple-500-rgb: 168, 85, 247;
+                --tw-yellow-500-rgb: 234, 179, 8;
+                --tw-red-500-rgb: 239, 68, 68;
+                --tw-indigo-500-rgb: 99, 102, 241;
+                --tw-pink-500-rgb: 236, 72, 153;
+                --tw-teal-500-rgb: 20, 184, 166;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
